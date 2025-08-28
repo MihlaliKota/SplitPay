@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lisk Wallet</title>
+  <style>
+    :root {
+      --primary: #1976d2;
+      --primary-dark: #1565c0;
+      --danger: #d32f2f;
+      --danger-dark: #c62828;
+      --success: #2e7d32;
+      --text: #333;
+      --text-light: #666;
+      --border: #e0e0e0;
+      --bg: #f5f5f5;
+      --white: #fff;
+      --shadow: 0 2px 8px rgba(0,0,0,0.1);
+      --radius: 8px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 400px;
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .screen { 
+      padding: 32px;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: var(--transition);
+    }
+
+    .screen.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .screen.hidden {
+      display: none;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 2.5em;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      margin: 0 0 32px 0;
+      font-size: 1.1em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    input { 
+      width: 100%;
+      padding: 16px;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 16px;
+      transition: var(--transition);
+      background: var(--white);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+    }
+
+    input:invalid {
+      border-color: var(--danger);
+    }
+
+    .btn { 
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      margin: 8px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: var(--white);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger-dark);
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading {
+      color: transparent;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      transition: var(--transition);
+    }
+
+    .link:hover {
+      text-decoration: underline;
+    }
+
+    .status {
+      margin: 16px 0;
+      padding: 12px;
+      border-radius: var(--radius);
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: var(--transition);
+    }
+
+    .status.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .status.error {
+      background: #ffebee;
+      color: var(--danger);
+      border: 1px solid #ffcdd2;
+    }
+
+    .status.success {
+      background: #e8f5e8;
+      color: var(--success);
+      border: 1px solid #c8e6c9;
+    }
+
+    .wallet-info {
+      background: var(--bg);
+      padding: 20px;
+      border-radius: var(--radius);
+      margin: 20px 0;
+    }
+
+    .balance {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--success);
+      margin: 16px 0;
+    }
+
+    .payment-id {
+      font-family: 'Courier New', monospace;
+      background: var(--white);
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      word-break: break-all;
+      font-size: 0.9em;
+      color: var(--text-light);
+    }
+
+    .copy-btn {
+      width: auto;
+      padding: 8px 16px;
+      margin: 8px 0 0 0;
+      font-size: 14px;
+      background: var(--border);
+      color: var(--text);
+    }
+
+    .copy-btn:hover {
+      background: #d0d0d0;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+      }
+      
+      .screen {
+        padding: 24px;
+      }
+      
+      h1 {
+        font-size: 2em;
+      }
+    }
+
+    .fade-out {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Signup Screen -->
+    <div id="signupScreen" class="screen active">
+      <h1>🔐 Lisk</h1>
+      <p class="subtitle">Create your secure wallet</p>
+      
+      <form id="signupForm" novalidate>
+        <div class="form-group">
+          <input 
+            type="email" 
+            id="signupEmail" 
+            placeholder="Email address" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+        <div class="form-group">
+          <input 
+            type="password" 
+            id="signupPassword" 
+            placeholder="Password (min 8 characters)" 
+            required 
+            minlength="8"
+            autocomplete="new-password"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" id="signupBtn">
+          Create Wallet
+        </button>
+      </form>
+      
+      <p>
+        <a href="#" class="link" onclick="switchScreen('login')">
+          Already have an account?
+        </a>
+      </p>
+      <div id="signupStatus" class="status"></div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="screen hidden">
+      <h1>🔑 Lisk</h1>
+      <p class="subtitle">Access your wallet</p>
+      
+      <form id="loginForm" novalidate>
+        <div class="form-group">
+          <input 
+            type="email" 
+            id="loginEmail" 
+            placeholder="Email address" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+        <div class="form-group">
+          <input 
+            type="password" 
+            id="loginPassword" 
+            placeholder="Password" 
+            required 
+            autocomplete="current-password"
+          />
+        </div>
+        <button type="submit" class="btn btn-primary" id="loginBtn">
+          Log In
+        </button>
+      </form>
+      
+      <p>
+        <a href="#" class="link" onclick="switchScreen('signup')">
+          Need an account?
+        </a>
+      </p>
+      <div id="loginStatus" class="status"></div>
+    </div>
+
+    <!-- Wallet Screen -->
+    <div id="walletScreen" class="screen hidden">
+      <h1>💰 Lisk</h1>
+      <p class="subtitle">Welcome back, <strong id="userEmail"></strong></p>
+      
+      <div class="wallet-info">
+        <p style="margin: 0 0 8px 0; color: var(--text-light);">Balance</p>
+        <div class="balance" id="balance">0.00 LZAR</div>
+        
+        <p style="margin: 20px 0 8px 0; color: var(--text-light);">Payment ID</p>
+        <div class="payment-id" id="paymentId"></div>
+        <button class="btn copy-btn" onclick="copyPaymentId()">Copy ID</button>
+      </div>
+      
+      <button class="btn btn-danger" onclick="logout()">
+        Log Out
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const CONFIG = {
+      API: 'http://localhost:5000',
+      TOKEN_KEY: 'lisk_token',
+      ANIMATION_DURATION: 300
+    };
+
+    // State management
+    const state = {
+      currentScreen: 'signup',
+      isLoading: false,
+      user: null
+    };
+
+    // Utility functions
+    const $ = (id) => document.getElementById(id);
+    
+    const debounce = (fn, delay) => {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn.apply(null, args), delay);
+      };
+    };
+
+    const validateEmail = (email) => {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    const validatePassword = (password) => {
+      return password.length >= 8;
+    };
+
+    // UI functions
+    function switchScreen(screenName) {
+      if (state.isLoading) return;
+      
+      const currentScreen = $(state.currentScreen + 'Screen');
+      const newScreen = $(screenName + 'Screen');
+      
+      // Fade out current screen
+      currentScreen.classList.add('fade-out');
+      
+      setTimeout(() => {
+        currentScreen.classList.remove('active', 'fade-out');
+        currentScreen.classList.add('hidden');
+        
+        newScreen.classList.remove('hidden');
+        
+        // Trigger reflow
+        newScreen.offsetHeight;
+        
+        newScreen.classList.add('active');
+        state.currentScreen = screenName;
+        clearAllStatus();
+      }, CONFIG.ANIMATION_DURATION);
+    }
+
+    function setLoading(buttonId, isLoading) {
+      const btn = $(buttonId);
+      if (isLoading) {
+        btn.classList.add('loading');
+        btn.disabled = true;
+        state.isLoading = true;
+      } else {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        state.isLoading = false;
+      }
+    }
+
+    function showStatus(elementId, message, type = 'error') {
+      const statusEl = $(elementId);
+      statusEl.textContent = message;
+      statusEl.className = `status ${type} show`;
+      
+      if (type === 'success') {
+        setTimeout(() => {
+          statusEl.classList.remove('show');
+        }, 3000);
+      }
+    }
+
+    function clearAllStatus() {
+      ['signupStatus', 'loginStatus'].forEach(id => {
+        const el = $(id);
+        el.classList.remove('show');
+        setTimeout(() => {
+          el.textContent = '';
+          el.className = 'status';
+        }, CONFIG.ANIMATION_DURATION);
+      });
+    }
+
+    // API functions
+    async function apiRequest(endpoint, options = {}) {
+      try {
+        const response = await fetch(`${CONFIG.API}${endpoint}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+          },
+          ...options
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        
+        return data;
+      } catch (error) {
+        if (error.message.includes('fetch')) {
+          throw new Error('Network error. Is the backend running?');
+        }
+        throw error;
+      }
+    }
+
+    // Auth functions
+    async function signup(email, password) {
+      if (!validateEmail(email)) {
+        throw new Error('Please enter a valid email address');
+      }
+      
+      if (!validatePassword(password)) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      const data = await apiRequest('/signup', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
+      return data;
+    }
+
+    async function login(email, password) {
+      if (!email || !password) {
+        throw new Error('Please fill in all fields');
+      }
+
+      const data = await apiRequest('/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password })
+      });
+
+      localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
+      return data;
+    }
+
+    async function loadWallet() {
+      const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+      if (!token) {
+        switchScreen('signup');
+        return;
+      }
+
+      try {
+        const data = await apiRequest('/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        state.user = data.user;
+        $('userEmail').textContent = data.user.email;
+        $('balance').textContent = `${data.balance.toFixed(2)} LZAR`;
+        $('paymentId').textContent = data.user.paymentIdentifier;
+        
+        switchScreen('wallet');
+      } catch (error) {
+        localStorage.removeItem(CONFIG.TOKEN_KEY);
+        showStatus('loginStatus', 'Session expired. Please log in again.');
+        switchScreen('login');
+      }
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to log out?')) {
+        localStorage.removeItem(CONFIG.TOKEN_KEY);
+        state.user = null;
+        switchScreen('signup');
+      }
+    }
+
+    async function copyPaymentId() {
+      try {
+        await navigator.clipboard.writeText($('paymentId').textContent);
+        
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.background = 'var(--success)';
+        btn.style.color = 'white';
+        
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+          btn.style.color = '';
+        }, 2000);
+      } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = $('paymentId').textContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+    }
+
+    // Event listeners
+    $('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = $('signupEmail').value.trim();
+      const password = $('signupPassword').value;
+      
+      setLoading('signupBtn', true);
+      
+      try {
+        await signup(email, password);
+        showStatus('signupStatus', 'Account created successfully!', 'success');
+        setTimeout(() => loadWallet(), 1000);
+      } catch (error) {
+        showStatus('signupStatus', error.message);
+      } finally {
+        setLoading('signupBtn', false);
+      }
+    });
+
+    $('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = $('loginEmail').value.trim();
+      const password = $('loginPassword').value;
+      
+      setLoading('loginBtn', true);
+      
+      try {
+        await login(email, password);
+        loadWallet();
+      } catch (error) {
+        showStatus('loginStatus', error.message);
+      } finally {
+        setLoading('loginBtn', false);
+      }
+    });
+
+    // Real-time validation
+    const validateInput = debounce((input) => {
+      const isValid = input.checkValidity();
+      input.style.borderColor = isValid ? 'var(--border)' : 'var(--danger)';
+    }, 300);
+
+    ['signupEmail', 'signupPassword', 'loginEmail', 'loginPassword'].forEach(id => {
+      $(id).addEventListener('input', (e) => validateInput(e.target));
+    });
+
+    // Initialize app
+    function init() {
+      // Check for existing token on load
+      const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+      if (token) {
+        loadWallet();
+      } else {
+        // Activate the signup screen with animation
+        setTimeout(() => {
+          $('signupScreen').classList.add('active');
+        }, 100);
+      }
+    }
+
+    // Start the app
+    init();
+  </script>
+</body>
+</html>
