@@ -256,11 +256,35 @@
       opacity: 0;
       transform: translateY(-20px);
     }
+
+    .change-password-section {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      text-align: left;
+    }
+    .change-password-form {
+       display: none; 
+    }
+    .change-password-form.active {
+       display: block;
+    }
+    .toggle-password-form {
+       background: none;
+       border: none;
+       color: var(--primary);
+       text-decoration: underline;
+       cursor: pointer;
+       padding: 0;
+       font-size: 14px;
+    }
+    .toggle-password-form:hover {
+       color: var(--primary-dark);
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Signup Screen -->
     <div id="signupScreen" class="screen active">
       <h1>🔐 Lisk</h1>
       <p class="subtitle">Create your secure wallet</p>
@@ -298,7 +322,6 @@
       <div id="signupStatus" class="status"></div>
     </div>
 
-    <!-- Login Screen -->
     <div id="loginScreen" class="screen hidden">
       <h1>🔑 Lisk</h1>
       <p class="subtitle">Access your wallet</p>
@@ -335,7 +358,6 @@
       <div id="loginStatus" class="status"></div>
     </div>
 
-    <!-- Wallet Screen -->
     <div id="walletScreen" class="screen hidden">
       <h1>💰 Lisk</h1>
       <p class="subtitle">Welcome back, <strong id="userEmail"></strong></p>
@@ -348,29 +370,45 @@
         <div class="payment-id" id="paymentId"></div>
         <button class="btn copy-btn" onclick="copyPaymentId()">Copy ID</button>
       </div>
-      
-      <button class="btn btn-danger" onclick="logout()">
+
+      <div class="change-password-section">
+        <button class="toggle-password-form" onclick="togglePasswordForm()">Change Password</button>
+        <form id="changePasswordForm" class="change-password-form">
+          <div class="form-group">
+            <input type="password" id="oldPassword" placeholder="Current Password" required />
+          </div>
+          <div class="form-group">
+            <input type="password" id="newPassword" placeholder="New Password (min 8 chars)" required minlength="8" />
+          </div>
+          <div class="form-group">
+            <input type="password" id="confirmNewPassword" placeholder="Confirm New Password" required />
+          </div>
+          <button type="submit" class="btn btn-primary" id="changePasswordBtn">Update Password</button>
+        </form>
+        <div id="changePasswordStatus" class="status"></div>
+      </div>
+
+      <button class="btn btn-danger" onclick="logout()" style="margin-top: 20px;">
         Log Out
       </button>
     </div>
+
+
   </div>
 
   <script>
-    // Configuration
     const CONFIG = {
       API: 'http://localhost:5000',
       TOKEN_KEY: 'lisk_token',
       ANIMATION_DURATION: 300
     };
 
-    // State management
     const state = {
       currentScreen: 'signup',
       isLoading: false,
       user: null
     };
 
-    // Utility functions
     const $ = (id) => document.getElementById(id);
     
     const debounce = (fn, delay) => {
@@ -389,14 +427,23 @@
       return password.length >= 8;
     };
 
-    // UI functions
+    function togglePasswordForm() {
+      const form = $('changePasswordForm');
+      form.classList.toggle('active');
+      if (!form.classList.contains('active')) {
+         form.reset();
+         $('changePasswordStatus').classList.remove('show');
+         $('changePasswordStatus').textContent = '';
+         $('changePasswordStatus').className = 'status';
+      }
+    }
+
     function switchScreen(screenName) {
       if (state.isLoading) return;
       
       const currentScreen = $(state.currentScreen + 'Screen');
       const newScreen = $(screenName + 'Screen');
       
-      // Fade out current screen
       currentScreen.classList.add('fade-out');
       
       setTimeout(() => {
@@ -405,12 +452,17 @@
         
         newScreen.classList.remove('hidden');
         
-        // Trigger reflow
         newScreen.offsetHeight;
         
         newScreen.classList.add('active');
         state.currentScreen = screenName;
         clearAllStatus();
+        if (screenName === 'wallet') {
+            $('changePasswordForm').classList.remove('active');
+            $('changePasswordForm').reset();
+            $('changePasswordStatus').classList.remove('show');
+            $('changePasswordStatus').className = 'status';
+        }
       }, CONFIG.ANIMATION_DURATION);
     }
 
@@ -440,17 +492,18 @@
     }
 
     function clearAllStatus() {
-      ['signupStatus', 'loginStatus'].forEach(id => {
+      ['signupStatus', 'loginStatus', 'changePasswordStatus'].forEach(id => {
         const el = $(id);
-        el.classList.remove('show');
-        setTimeout(() => {
-          el.textContent = '';
-          el.className = 'status';
-        }, CONFIG.ANIMATION_DURATION);
+        if (el) { 
+            el.classList.remove('show');
+            setTimeout(() => {
+              el.textContent = '';
+              el.className = 'status';
+            }, CONFIG.ANIMATION_DURATION);
+        }
       });
     }
 
-    // API functions
     async function apiRequest(endpoint, options = {}) {
       try {
         const response = await fetch(`${CONFIG.API}${endpoint}`, {
@@ -476,7 +529,21 @@
       }
     }
 
-    // Auth functions
+    async function changePassword(oldPassword, newPassword) {
+      const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+      if (!token) {
+        throw new Error('No authentication token found. Please log in.');
+      }
+
+      const data = await apiRequest('/me/password', {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
+      return data;
+    }
+
+
     async function signup(email, password) {
       if (!validateEmail(email)) {
         throw new Error('Please enter a valid email address');
@@ -558,7 +625,6 @@
           btn.style.color = '';
         }, 2000);
       } catch (err) {
-        // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = $('paymentId').textContent;
         document.body.appendChild(textArea);
@@ -568,7 +634,6 @@
       }
     }
 
-    // Event listeners
     $('signupForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       
@@ -606,31 +671,59 @@
       }
     });
 
-    // Real-time validation
+    if ($('changePasswordForm')) {
+        $('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const oldPass = $('oldPassword').value.trim();
+        const newPass = $('newPassword').value;
+        const confirmNewPass = $('confirmNewPassword').value;
+
+        if (newPass !== confirmNewPass) {
+            showStatus('changePasswordStatus', 'New passwords do not match.', 'error');
+            return;
+        }
+
+        setLoading('changePasswordBtn', true);
+        try {
+            await changePassword(oldPass, newPass);
+            showStatus('changePasswordStatus', 'Password updated successfully!', 'success');
+            $('changePasswordForm').reset();
+             togglePasswordForm(); 
+             setTimeout(() => {
+               alert("For security, you have been logged out. Please log in with your new password.");
+               logout();
+             }, 2000);
+        } catch (error) {
+            showStatus('changePasswordStatus', error.message, 'error');
+        } finally {
+            setLoading('changePasswordBtn', false);
+        }
+        });
+    }
+
     const validateInput = debounce((input) => {
       const isValid = input.checkValidity();
       input.style.borderColor = isValid ? 'var(--border)' : 'var(--danger)';
     }, 300);
 
     ['signupEmail', 'signupPassword', 'loginEmail', 'loginPassword'].forEach(id => {
-      $(id).addEventListener('input', (e) => validateInput(e.target));
+      if ($(id)) {
+          $(id).addEventListener('input', (e) => validateInput(e.target));
+      }
     });
 
-    // Initialize app
     function init() {
-      // Check for existing token on load
       const token = localStorage.getItem(CONFIG.TOKEN_KEY);
       if (token) {
         loadWallet();
       } else {
-        // Activate the signup screen with animation
         setTimeout(() => {
           $('signupScreen').classList.add('active');
         }, 100);
       }
     }
 
-    // Start the app
     init();
   </script>
 </body>
